@@ -51,8 +51,12 @@ print '==> allocating minibatch memory'
 local x = torch.Tensor(opt.batchSize, opt.channels, opt.imHeight, opt.imWidth)
 local yt = torch.Tensor(opt.batchSize, opt.labelHeight, opt.labelWidth)
 
+print (opt)
+print '==> move data to cuda'
 x = x:cuda()
 yt = yt:cuda()
+
+print '==> defining train function'
 
 local function train(trainData, classes, epoch)
    if epoch % opt.lrDecayEvery == 0 then optimState.learningRate = optimState.learningRate * opt.learningRateDecay end
@@ -147,4 +151,5 @@ local function train(trainData, classes, epoch)
 end
 
 -- Export:
+print '==> returning train function'
 return train

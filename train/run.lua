@@ -12,6 +12,21 @@ require 'nn'
 -- Local repo files
 local opts = require 'opts'
 
+--[[
+print(arg)
+arg = {
+  '--dataset', 'cv', 
+  '--datapath', '/media/D/DIZ/ENet', 
+  '--model', 'models/encoder.lua',
+  '--save', './save/trained/model/',
+  '--imHeight', '360', 
+  '--imWidth', '480', 
+  '-cachepath', './media',
+  '--nGPU', '1',
+  '-r', '1e-6'
+  }
+--]]
+
 -- Get the input arguments parsed and stored in opt
 opt = opts.parse(arg)
 
@@ -53,8 +68,19 @@ local epoch = 1
 
 t = paths.dofile(opt.model)
 
+bestName=path.join(opt.save,'model-best.net');
+if (paths.filep(bestName)) then
+   md = torch.load(bestName)
+   t.model.modules[1] = md
+   print ('model ' .. bestName .. ' loaded')
+end
+
+-- print(t.model)
+
 local train = require 'train'
+print '-- returned from train'
 local test  = require 'test'
+print ('learnningRate = '.. opt.learningRate)
 while epoch < opt.maxepoch do
    local trainConf, model, loss = train(data.trainData, opt.dataClasses, epoch)
    test(data.testData, opt.dataClasses, epoch, trainConf, model, loss )
