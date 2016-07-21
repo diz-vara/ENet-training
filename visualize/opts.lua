@@ -31,6 +31,9 @@ function opts.parse(arg)
                   Model version
    --net          (default 1)
                   Model epoch number
+   --modelpath    (default nil)
+                  path to the model file
+                   
 
    ## Device
    --dev          (default cuda)

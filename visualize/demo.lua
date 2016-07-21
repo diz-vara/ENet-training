@@ -20,6 +20,7 @@ local colorMap = assert(require('colorMap'))
 
 -- Get the input arguments parsed and stored in opt
 local opt = opts.parse(arg)
+print (opt)
 
 torch.setdefaulttensortype('torch.FloatTensor')
 if opt.dev:lower() == 'cuda' then
@@ -30,9 +31,15 @@ end
 ----------------------------------------
 -- Network
 local network = {}
---network.path = opt.model
-network.path=opt.dmodel .. opt.model .. '/model-' .. opt.net .. '.net'
-network.txtpath=opt.dmodel .. opt.model .. '/model-' .. opt.net .. '.n7a'
+network.path = opt.modelpath
+if network.path == nil then
+   network.path=opt.dmodel .. opt.model .. '/model-' .. opt.net .. '.net'
+   network.txtpath=opt.dmodel .. opt.model .. '/model-' .. opt.net .. '.n7a'
+else
+  local rn = paths.dirname(network.path)
+  opt.model = paths.basename(rn)
+  opt.dmodel = paths.dirname(rn) .. '/'
+end
 assert(paths.filep(network.path), 'Model not present at ' .. network.path)
 print("Loading model from: " .. network.path)
 
@@ -49,7 +56,7 @@ end
 if opt.dev:lower() == 'cpu' then
    cudnn.convert(network.model, nn)
    network.model:float()
-   torch.save(network.txtpath, network.model, 'ascii')
+   --torch.save(network.txtpath, network.model, 'ascii')
 else
    network.model:cuda()
 end
