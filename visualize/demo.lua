@@ -30,7 +30,9 @@ end
 ----------------------------------------
 -- Network
 local network = {}
-network.path = opt.dmodel .. opt.model .. '/model-' .. opt.net .. '.net'
+--network.path = opt.model
+network.path=opt.dmodel .. opt.model .. '/model-' .. opt.net .. '.net'
+network.txtpath=opt.dmodel .. opt.model .. '/model-' .. opt.net .. '.n7a'
 assert(paths.filep(network.path), 'Model not present at ' .. network.path)
 print("Loading model from: " .. network.path)
 
@@ -47,6 +49,7 @@ end
 if opt.dev:lower() == 'cpu' then
    cudnn.convert(network.model, nn)
    network.model:float()
+   torch.save(network.txtpath, network.model, 'ascii')
 else
    network.model:cuda()
 end
@@ -182,6 +185,8 @@ else
    end
 end
 
+bPause = false
+bOnce = false
 
 -- profiling timers
 local timer = torch.Timer()      -- whole loop
@@ -198,7 +203,11 @@ local td = torch.Timer()         -- displaying
 local displayTime
 
 local main = function()
-   if win:valid() then
+   if win:valid() and (not bPause or bOnce) then
+	if (bOnce) then
+		bOnce = false
+	end
+
       -- Reset timer to mark starting point to calculate fps
       timer:reset()
 
@@ -331,9 +340,12 @@ local prevState = true
 qt.connect(win.listener,
          'sigKeyPress(QString, QByteArray, QByteArray)',
          function(_, keyValue)
-            if keyValue == 'Key_Space' then
+            if keyValue == 'Key_E' then
+		bPause = true;
+		bOnce = true;
+            elseif keyValue == 'Key_Space' then
                print("Video paused; press enter to continue...")
-               io.read()
+               bPause = not bPause --io.read()
             elseif keyValue == 'Key_Escape' then
                os.exit()
             elseif keyValue == 'Key_Right' then
