@@ -23,6 +23,7 @@ function opts.parse(arg)
                   Resolution of the camera: QHD/VGA/FWVGA/HD/FHD
    --dataset      (default cs)
                   cityscapes/camvid/sun: cs/cv/su
+   --out          (default "")               
 
    ## Model
    -d, --dmodel   (default /media/HDD1/Models/)
@@ -31,7 +32,7 @@ function opts.parse(arg)
                   Model version
    --net          (default 1)
                   Model epoch number
-   --modelpath    (default nil)
+   --modelpath    (default "")
                   path to the model file
                    
 
