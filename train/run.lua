@@ -49,8 +49,10 @@ elseif opt.dataset == 'cs' then
    data = require 'data/loadCityscape'
 elseif opt.dataset == 'su' then
    data = require 'data/loadSUN'
+elseif opt.dataset == 'my' then
+   data = require 'data/loadMyData'
 else
-   error ("Dataset loader not found. (Available options are: cv/cs/su")
+   error ("Dataset loader not found. (Available options are: cv/cs/su/my")
 end
 
 print 'saving opt as txt and t7'
@@ -62,6 +64,7 @@ end
 file:close()
 torch.save(path.join(opt.save,'opt.t7'),opt)
 
+
 ----------------------------------------------------------------------
 print '==> training!'
 local epoch = 1
@@ -69,9 +72,10 @@ local epoch = 1
 t = paths.dofile(opt.model)
 
 bestName=path.join(opt.save,'model-best.net');
+print ('::::bestName = ' .. bestName)
 if (paths.filep(bestName)) then
    md = torch.load(bestName)
-   t.model.modules[1] = md
+   t.model = md --.modules[1] = md
    print ('model ' .. bestName .. ' loaded')
 end
 
