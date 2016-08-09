@@ -73,7 +73,7 @@ local classCount = 1
 if opt.smallNet then
 classMap = {[-1] = {1},  -- licence platete
             [0]  = {1},  -- Unlabeled
-            [1]  = {1},  -- Ego vehicle
+            [1]  = {9},  -- Ego vehicle
             [2]  = {1},  -- Rectification border
             [3]  = {1},  -- Out of roi
             [4]  = {1},  -- Static
@@ -109,8 +109,8 @@ classMap = {[-1] = {1},  -- licence platete
                        }
 
 classes = {'Unlabeled', 'flat', 'construction', 'object', 'nature',
-           'sky', 'human', 'vehicle', }
-conClasses = {'flat', 'construction', 'object', 'nature','sky', 'human', 'vehicle', } -- 7 classee
+           'sky', 'human', 'vehicle', 'ego'}
+conClasses = {'flat', 'construction', 'object', 'nature','sky', 'human', 'vehicle', 'ego'} -- 7 classee
 end
 -- From here #class will give number of classes even after shortening the list
 -- nClasses should be used to get number of classes in original list
