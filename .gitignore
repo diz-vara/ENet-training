@@ -7,3 +7,13 @@
 *.log
 train/save/*
 
+/visualize/ENet.dot
+/visualize/ENet.svg
+/visualize/googlenet.dot
+/visualize/googlenet.svg
+/visualize/modelCS01_cpu.n7
+/visualize/modelCS01_cpu.n7a
+/visualize/opt.t7a
+/visualize/scaledImg.t7a
+/train/y.t7a
+/visualize/categories.txt
