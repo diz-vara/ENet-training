@@ -94,18 +94,18 @@ function test(testData, classes, epoch, trainConf, model, loss )
    totalerr = totalerr / (testData:size() / opt.batchSize)
    print('Test Error: ', totalerr )
    -- save/log current net
-   errorLogger:add{['Training error'] = trainError,
+   errorLogger:add{['epoch'] = epoch, ['Training error'] = trainError,
                    ['Testing error'] = totalerr}
    if opt.plot then
       errorLogger:style{['Training error'] = '-',
       ['Testing error'] = '-'}
-      errorLogger:plot()
+      errorLogger:plot('Training error', 'Testing error')
    end
    if totalerr < testData.preverror then
       filename = paths.concat(opt.save, 'model-best.net')
       print('==> saving model to '..filename)
 
-      torch.save(filename, model:clearState():get(1))
+      torch.save(filename, model:clearState())--:get(1))
       -- update to min error:
       if opt.noConfusion == 'tes' or opt.noConfusion == 'all' then
          coTotalLogger:add{['confusion total accuracy'] = teconfusion.totalValid * 100 }
