@@ -1,9 +1,11 @@
+require 'paths'
 local frame = {}
 torch.setdefaulttensortype('torch.FloatTensor')
 
 local pf = function(...) print(string.format(...)) end
 local Cb = sys.COLORS.blue
 local Cn = sys.COLORS.none
+local cnt = 0
 
 --[[
    opt fields
@@ -17,6 +19,8 @@ local Cn = sys.COLORS.none
       h           image height
 
 --]]
+local basename
+
 function frame:init(opt, source)
 
    local vd = require('libvideo_decoder')
@@ -44,6 +48,8 @@ function frame:init(opt, source)
    end
    local img_tmp = torch.FloatTensor(opt.batch, 3, source.h, source.w)
 
+  basename = paths.basename(opt.input)
+  
    -- set frame forward function
    frame.forward = function(img)
       local n = opt.batch
@@ -61,7 +67,9 @@ function frame:init(opt, source)
       else
          img = img_tmp:narrow(1,1,n)
       end
-      return img
+      name = string.format("fr%05d.png", cnt)
+      cnt = cnt + 1
+      return img, name, basename
    end
 
 end

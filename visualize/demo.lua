@@ -21,7 +21,7 @@ print (arg)
 local opts = require 'opts'
 -- Get the input arguments parsed and stored in opt
 local opt = opts.parse(arg)
-torch.save('otps.t7',opt)
+torch.save('otps.t7a',opt, 'ascii')
 local colorMap = assert(require('colorMap'))
 
 print (opt)
@@ -221,6 +221,7 @@ end
 
 bPause = false
 bOnce = false
+bPause = false
 
 -- profiling timers
 local timer = torch.Timer()      -- whole loop
@@ -235,6 +236,11 @@ local tc = torch.Timer()
 local colormapTime
 local td = torch.Timer()         -- displaying
 local displayTime
+local img
+local fn
+local outName
+local inpName
+local colored
 
 local main = function()
    if win:valid() and (not bPause or bOnce) then
@@ -247,17 +253,33 @@ local main = function()
 
       -- Getting next frame
       tg:reset()
-      local img, fn = frame.forward(img)
+      img, fn, basename = frame.forward(img)
       if (fn == nil) then
         print('fn == nil')
-        return false;
+        --  return false;
       end
       
-      if opt.out ~= nil and opt.out:len() > 0 then
-        print('opt.out=[' .. opt.out .. ']')
-        outName = opt.out .. '/' .. fn.filename;
+      
+      
+      
+      if opt.saveinp and opt.saveinp:len() > 0 then
+        local inpDir = opt.saveinp .. '/' .. basename
+        if (paths.dirp(inpDir) == false) then
+          paths.mkdir(inpDir)
+        end
+        
+        inpName = inpDir .. '/' .. fn;
       end
-      print (fn.filename)
+        
+      if opt.out and opt.out:len() > 0 then
+        local outDir = opt.out .. '/' .. basename
+        if (paths.dirp(outDir) == false) then
+          paths.mkdir(outDir)
+        end
+        
+        outName = outDir .. '/' .. fn;
+      end
+      print (fn)
 
       win.name = ''
       grabTime = tg:time().real
@@ -272,18 +294,34 @@ local main = function()
        --       img[i][c]:div( network.stat.std [c])
        --    end
        -- end
-
-      if img:dim() == 3 then
-         img = img:view(1, img:size(1), img:size(2), img:size(3))
+       
+       local newW = source.w
+       local newH = source.h
+      -- 20160809 - optionally rescale to HD
+      local imgHD
+      if (opt.width > 0) then
+        newW = opt.width
+        newH = source.h * opt.width / source.w
+        imgHD = image.scale( img[1], newW, newH, 'bilinear')
+      else
+        imgHD = image[1]
       end
-      local scaledImg = torch.Tensor(1, 3, opt.ratio * img:size(3), opt.ratio * img:size(4))
+
+      if imgHD:dim() == 3 then
+         imgHD = imgHD:view(1, imgHD:size(1), newH, newW)
+      end
+      
+      
+      
+      local scaledImg = torch.Tensor(1, 3, opt.ratio * newH, opt.ratio * newW)
 
       if opt.ratio == 1 then
-         scaledImg[1] = img[1]
+         scaledImg[1] = imgHD[1]
       else
-         scaledImg[1] = image.scale(img[1],
-                                    opt.ratio * source.w,
-                                    opt.ratio * source.h,
+        print (imgHD:size(), scaledImg:size())
+         scaledImg[1] = image.scale(imgHD[1],
+                                    opt.ratio * newW,
+                                    opt.ratio * newH,
                                     'bilinear')
       end
 
@@ -331,20 +369,21 @@ local main = function()
       -- colorize classes
       colored, colormap = imgraph.colorize(winner, colormap)
     
-      if outName ~= nil then
+      if outName ~= nil and opt.save then
         image.savePNG(outName, colored)
         --torch.save(outName .. '.t7a',winner0, 'ascii')
       end
 
+    local sum = colored:clone();
       -- add input image:
-      colored:add(img[1]:float())
+      sum:add(img[1]:float())
 
       colormapTime = tc:time().real
 
       td:reset()
       -- display frame:
       -- gui is turned off for faster display
-      image.display{image=colored, win=win,
+      image.display{image=sum, win=win,
                     zoom=opt.zoom, gui=false,
                     min=0, max=colored:max()
                    }
@@ -362,7 +401,7 @@ local main = function()
       local fps = string.format('%.2f', (1/totalTime)) .. ' fps'
 
       win:show(fps)
-      -- display profiling on screen
+      -- display profiling on screen  
       win:setfont(qt.QFont{serif=false, italic=false, size=12})
       win:gend()
 
@@ -394,8 +433,15 @@ qt.connect(win.listener,
          'sigKeyPress(QString, QByteArray, QByteArray)',
          function(_, keyValue)
             if keyValue == 'Key_E' then
-		bPause = true;
-		bOnce = true;
+              bPause = true;
+              bOnce = true;
+            elseif keyValue == 'Key_S' then
+              if outName ~= nil  then
+                image.savePNG(outName, colored)
+              end
+              if inpName ~= nil  then
+                image.savePNG(inpName, img[1])
+              end
             elseif keyValue == 'Key_Space' then
                print("Video paused; press enter to continue...")
                bPause = not bPause --io.read()

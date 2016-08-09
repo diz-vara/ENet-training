@@ -23,7 +23,10 @@ function opts.parse(arg)
                   Resolution of the camera: QHD/VGA/FWVGA/HD/FHD
    --dataset      (default cs)
                   cityscapes/camvid/sun: cs/cv/su
-   --out          (default "")               
+   --saveinp      (default "")               
+   -o, --out      (default "")   
+   -s, --save     save flag
+   -w, --width    (default 0)
 
    ## Model
    -d, --dmodel   (default /media/HDD1/Models/)

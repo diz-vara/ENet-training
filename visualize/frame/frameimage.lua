@@ -36,14 +36,14 @@ function frame:init(opt, source)
    frame.forward = function(img, res_idx)
       if first then
          first = false
-         return source.img, filenames
+         return source.img, filenames.filename
       else
          source.img, filenames = fi.load(img, res_idx)
          if batch == 1 and source.img then
             source.img = source.img[1]
             filenames = filenames[1]
          end
-         return source.img, filenames
+         return source.img, filenames.filename
       end
    end
 
