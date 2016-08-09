@@ -159,15 +159,24 @@ source.fps = opt.fps
 -- source height and width gets updated by __init based on the input video
 frame:init(opt, source)
 
+ local newW = source.w
+ local newH = source.h
+-- 20160809 - optionally rescale to HD
+if (opt.width > 0) then
+  newW = opt.width
+  newH = source.h * opt.width / source.w
+end
+
+
 -- Create a window for displaying output frames
 win = qtwidget.newwindow
-   ( source.w * opt.zoom + 75
-   , source.h * opt.zoom
+   ( newW * opt.zoom + 75
+   , newH * opt.zoom
    , 'e-Lab Scene ParserParser'
  )
  
  --lbl = torch.Tensor(3,#classes * 100,200)
- 
+
 
 local qtimer = qt.QTimer()
 
@@ -177,14 +186,14 @@ win:setfontsize(12)
 -- Show legends in the output window:
 local dy = 20
 if opt.limitClass then
-   dy = (opt.zoom * source.h)/(#classSmall + 1)
+   dy = (opt.zoom * newH)/(#classSmall + 1)
    for i = 1,#classSmall do
       local y = (i-1)*dy
-      win:rectangle(source.w * opt.zoom, y, 75, dy)
+      win:rectangle(newW * opt.zoom, y, 75, dy)
       win:setcolor(colorsSmall[i][1],colorsSmall[i][2],colorsSmall[i][3])
       win:fill()
       win:setcolor('black')
-      win:moveto(source.w * opt.zoom + 5, y+dy/2)
+      win:moveto(newW * opt.zoom + 5, y+dy/2)
       win:show(classSmall[i])
       --[[
       lbl[{{1}, {(i-1)*100+1, i*100}, {}}] = colorSmall[i][1]
@@ -193,14 +202,14 @@ if opt.limitClass then
       --]]
    end
 else
-   dy = (opt.zoom * source.h)/(#classes + 1)
+   dy = (opt.zoom * newH)/(#classes + 1)
    for i = 1,#classes do
       local y = (i-1)*dy
-      win:rectangle(source.w * opt.zoom, y, 75, dy)
+      win:rectangle(newW * opt.zoom, y, 75, dy)
       win:setcolor(colors[i][1],colors[i][2],colors[i][3])
       win:fill()
       win:setcolor('black')
-      win:moveto(source.w * opt.zoom + 5, y+dy/2)
+      win:moveto(newW * opt.zoom + 5, y+dy/2)
       win:show(classes[i])
       --[[     
       lbl[{{1}, {(i-1)*100+1, i*100}, {}}] = colors[i][1]
@@ -236,7 +245,7 @@ local tc = torch.Timer()
 local colormapTime
 local td = torch.Timer()         -- displaying
 local displayTime
-local img
+local imgHD
 local fn
 local outName
 local inpName
@@ -294,14 +303,10 @@ local main = function()
        --       img[i][c]:div( network.stat.std [c])
        --    end
        -- end
-       
-       local newW = source.w
-       local newH = source.h
-      -- 20160809 - optionally rescale to HD
       local imgHD
+       
+      -- 20160809 - optionally rescale to HD
       if (opt.width > 0) then
-        newW = opt.width
-        newH = source.h * opt.width / source.w
         imgHD = image.scale( img[1], newW, newH, 'bilinear')
       else
         imgHD = image[1]
@@ -318,8 +323,7 @@ local main = function()
       if opt.ratio == 1 then
          scaledImg[1] = imgHD[1]
       else
-        print (imgHD:size(), scaledImg:size())
-         scaledImg[1] = image.scale(imgHD[1],
+        scaledImg[1] = image.scale(imgHD[1],
                                     opt.ratio * newW,
                                     opt.ratio * newH,
                                     'bilinear')
@@ -356,8 +360,8 @@ local main = function()
       if opt.ratio * source.h ~= winner:size(1) or
          opt.ratio * source.w ~= winner:size(2) then
          winner = image.scale(winner:float(),
-                              source.w, -- * opt.ratio,
-                              source.h, -- * opt.ratio,
+                              newW, -- * opt.ratio,
+                              newH, -- * opt.ratio,
                               'simple')
       end
       winnerTime = tw:time().real
@@ -376,7 +380,7 @@ local main = function()
 
     local sum = colored:clone();
       -- add input image:
-      sum:add(img[1]:float())
+      sum:add(imgHD[1]:float())
 
       colormapTime = tc:time().real
 
@@ -388,11 +392,11 @@ local main = function()
                     min=0, max=colored:max()
                    }
 
-      win:rectangle(source.w * opt.zoom, (source.h * opt.zoom)-dy, 75, dy)
+      win:rectangle(newW * opt.zoom, (newH * opt.zoom)-dy, 75, dy)
       win:setcolor('white')
       win:fill()
       win:setcolor('black')
-      win:moveto(source.w * opt.zoom + 5, (source.h * opt.zoom)-dy + 15)
+      win:moveto(newW * opt.zoom + 5, (newH * opt.zoom)-dy + 15)
 
       displayTime = td:time().real
 
@@ -440,7 +444,7 @@ qt.connect(win.listener,
                 image.savePNG(outName, colored)
               end
               if inpName ~= nil  then
-                image.savePNG(inpName, img[1])
+                image.savePNG(inpName, imgHD[1])
               end
             elseif keyValue == 'Key_Space' then
                print("Video paused; press enter to continue...")
