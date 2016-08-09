@@ -127,8 +127,8 @@ loss = cudnn.SpatialCrossEntropyCriterion(classWeights)
 
 loss:cuda()
 ----------------------------------------------------------------------
-print '==> here is the model:'
-print(model)
+--print '==> here is the model:'
+--print(model)
 
 
 -- return package:
