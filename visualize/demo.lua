@@ -14,12 +14,16 @@ require 'qtwidget'
 require 'cunn'
 require 'cudnn'
 
+
+print (arg)
+
 -- Local repo files
 local opts = require 'opts'
-local colorMap = assert(require('colorMap'))
-
 -- Get the input arguments parsed and stored in opt
 local opt = opts.parse(arg)
+torch.save('otps.t7',opt)
+local colorMap = assert(require('colorMap'))
+
 print (opt)
 
 torch.setdefaulttensortype('torch.FloatTensor')
@@ -69,7 +73,8 @@ network.model:clearState()
 local stat_file = opt.dmodel .. opt.model .. '/' .. 'stat.t7'
 if paths.filep(stat_file) then
    network.stat = torch.load(stat_file)
-elseif paths.filep(stat_file .. 'ascii') then
+elseif paths.filep(stat_file .. 'ascii')
+then
    network.stat = torch.load(stat_file .. '.ascii', 'ascii')
 else
    print('No stat file found in directory: ' .. opt.dmodel .. opt.model)
@@ -156,10 +161,13 @@ frame:init(opt, source)
 
 -- Create a window for displaying output frames
 win = qtwidget.newwindow
-   ( source.w * opt.ratio * opt.zoom + 75
-   , source.h * opt.ratio * opt.zoom
-   , 'e-Lab Scene Parser'
-   )
+   ( source.w * opt.zoom + 75
+   , source.h * opt.zoom
+   , 'e-Lab Scene ParserParser'
+ )
+ 
+ --lbl = torch.Tensor(3,#classes * 100,200)
+ 
 
 local qtimer = qt.QTimer()
 
@@ -169,28 +177,47 @@ win:setfontsize(12)
 -- Show legends in the output window:
 local dy = 20
 if opt.limitClass then
-   dy = (opt.zoom * opt.ratio * source.h)/(#classSmall + 1)
+   dy = (opt.zoom * source.h)/(#classSmall + 1)
    for i = 1,#classSmall do
       local y = (i-1)*dy
-      win:rectangle(source.w * opt.ratio * opt.zoom, y, 75, dy)
+      win:rectangle(source.w * opt.zoom, y, 75, dy)
       win:setcolor(colorsSmall[i][1],colorsSmall[i][2],colorsSmall[i][3])
       win:fill()
       win:setcolor('black')
-      win:moveto(source.w * opt.ratio * opt.zoom + 5, y+dy/2)
+      win:moveto(source.w * opt.zoom + 5, y+dy/2)
       win:show(classSmall[i])
+      --[[
+      lbl[{{1}, {(i-1)*100+1, i*100}, {}}] = colorSmall[i][1]
+      lbl[{{2}, {(i-1)*100+1, i*100}, {}}] = colorSmall[i][2]
+      lbl[{{3}, {(i-1)*100+1, i*100}, {}}] = colorSmall[i][3]
+      --]]
    end
 else
-   dy = (opt.zoom * opt.ratio * source.h)/(#classes + 1)
+   dy = (opt.zoom * source.h)/(#classes + 1)
    for i = 1,#classes do
       local y = (i-1)*dy
-      win:rectangle(source.w * opt.ratio * opt.zoom, y, 75, dy)
+      win:rectangle(source.w * opt.zoom, y, 75, dy)
       win:setcolor(colors[i][1],colors[i][2],colors[i][3])
       win:fill()
       win:setcolor('black')
-      win:moveto(source.w * opt.ratio * opt.zoom + 5, y+dy/2)
+      win:moveto(source.w * opt.zoom + 5, y+dy/2)
       win:show(classes[i])
+      --[[     
+      lbl[{{1}, {(i-1)*100+1, i*100}, {}}] = colors[i][1]
+      lbl[{{2}, {(i-1)*100+1, i*100}, {}}] = colors[i][2]
+      lbl[{{3}, {(i-1)*100+1, i*100}, {}}] = colors[i][3]
+      --]]
+
+   
    end
 end
+   
+--[[   
+image.display(lbl)   
+if (opt.out ~= nil and opt.out:len() > 0) then 
+  image.savePNG(opt.out .. "/colors.png",lbl);
+end
+--]]
 
 bPause = false
 bOnce = false
@@ -220,12 +247,24 @@ local main = function()
 
       -- Getting next frame
       tg:reset()
-      local img = frame.forward(img)
+      local img, fn = frame.forward(img)
+      if (fn == nil) then
+        print('fn == nil')
+        return false;
+      end
+      
+      if opt.out ~= nil and opt.out:len() > 0 then
+        print('opt.out=[' .. opt.out .. ']')
+        outName = opt.out .. '/' .. fn.filename;
+      end
+      print (fn.filename)
 
+      win.name = ''
       grabTime = tg:time().real
 
       -- Processing the frame and forwarding it to network
       tp:reset()
+      
        -- normalize the input:
        -- for i=1,img:size(1) do
        --    for c = 1,3 do
@@ -273,12 +312,14 @@ local main = function()
          winner = winners:squeeze()
       end
 
+     
       -- Confirming whether rescaling is even necessary or not
+      --local winner0 = winner:clone()
       if opt.ratio * source.h ~= winner:size(1) or
          opt.ratio * source.w ~= winner:size(2) then
          winner = image.scale(winner:float(),
-                              opt.ratio * source.w,
-                              opt.ratio * source.h,
+                              source.w, -- * opt.ratio,
+                              source.h, -- * opt.ratio,
                               'simple')
       end
       winnerTime = tw:time().real
@@ -289,9 +330,14 @@ local main = function()
       tc:reset()
       -- colorize classes
       colored, colormap = imgraph.colorize(winner, colormap)
+    
+      if outName ~= nil then
+        image.savePNG(outName, colored)
+        --torch.save(outName .. '.t7a',winner0, 'ascii')
+      end
 
       -- add input image:
-      colored:add(scaledImg[1]:float())
+      colored:add(img[1]:float())
 
       colormapTime = tc:time().real
 
@@ -303,11 +349,11 @@ local main = function()
                     min=0, max=colored:max()
                    }
 
-      win:rectangle(source.w * opt.ratio * opt.zoom, (source.h * opt.ratio * opt.zoom)-dy, 75, dy)
+      win:rectangle(source.w * opt.zoom, (source.h * opt.zoom)-dy, 75, dy)
       win:setcolor('white')
       win:fill()
       win:setcolor('black')
-      win:moveto(source.w * opt.ratio * opt.zoom + 5, (source.h * opt.ratio * opt.zoom)-dy + 15)
+      win:moveto(source.w * opt.zoom + 5, (source.h * opt.zoom)-dy + 15)
 
       displayTime = td:time().real
 
