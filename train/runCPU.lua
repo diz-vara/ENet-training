@@ -71,8 +71,8 @@ end
 t = paths.dofile(opt.model)
 
 if opt.dataset ~= 'su' then
-   local train = require 'train'
-   local test  = require 'test'
+   train = require 'trainCPU'
+   test  = require 'testCPU'
    while epoch < opt.maxepoch do
       local trainConf, model, loss = train(data.trainData, opt.dataClasses, epoch)
       test(data.testData, opt.dataClasses, epoch, trainConf, model, loss )

@@ -25,23 +25,23 @@ function opts.parse(arg)
    -t,--threads            (default 8)           number of threads
    -i,--devid              (default 1)           device ID (if using CUDA)
    --nGPU                  (default 2)           number of GPUs you want to train on
-   --save                  (default /media/)     save trained model here
+   --save                  (default ./media/)     save trained model here
 
    Dataset Related:
    --channels              (default 3)
    --datapath              (default /media/Dataset/)
                            dataset location
    --dataset               (default cv)          dataset type: cv(CamVid)/cs(cityscapes)/su(SUN)
-   --cachepath             (default /media/)
+   --cachepath             (default ./media/)
                            cache directory to save the loaded dataset
    --imHeight              (default 360)         image height  (360 cv/256 cs/200 su)
    --imWidth               (default 480)         image width   (480 cv/512 cs/256 su)
    --labelHeight           (default 45)          label height  (45  cv/32 cs/25 su)
    --labelWidth            (default 60)          label width   (60  cv/64 cs/32 su)
-   --smallNet                                    reduce number of classes
+   --smallNet              1                      reduce number of classes
 
    Model Related:
-   --model                 (default models/encoder.lua)
+   --model                 (default models/encoderCPU.lua)
                            Path of a model
    --CNNEncoder            (default /media/Models/CamVid/enc/model-100.net)
                            pretrained encoder for which you want to train your decoder

@@ -4,3 +4,9 @@
 *.net
 .DS_Store
 *.*~
+
+*.t7a
+*.n7a
+*.png
+*.log
+*.txt
