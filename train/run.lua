@@ -33,19 +33,7 @@ if opt.dataset == 'cv' then
 elseif opt.dataset == 'cs' then
    data = require 'data/loadCityscape'
 elseif opt.dataset == 'su' then
-    for i = 1 , 8 do
-        local cacheDir = paths.concat(opt.cachepath, 'sun')
-        local cachePath = paths.concat(cacheDir, tostring(i)..'data.t7')
-        local histPath = paths.concat(cacheDir, 'from_'..tostring(i)..'th_hist.txt')
-        if  opt.cachepath ~= "none" and paths.filep(cachePath) or paths.filep(histPath)then
-            IDX = i
-        end
-    end
-    IDX = 1
-    print('SUN loading data')
-    ft = require 'data/loadSun'
-    chunks = ft()
-    print(chunks)
+   data = require 'data/loadSUN'
 else
    error ("Dataset loader not found. (Available options are: cv/cs/su")
 end
@@ -62,11 +50,6 @@ torch.save(path.join(opt.save,'opt.t7'),opt)
 ----------------------------------------------------------------------
 print '==> training!'
 local epoch = 1
--- epoch tracker
-if string.len(opt.startfrom) > 1 then
-     local util = assert(require '/misc/util','no /misc/util')
-     epoch = util.setOpt()
-end
 
 t = paths.dofile(opt.model)
 

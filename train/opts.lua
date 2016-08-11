@@ -16,10 +16,10 @@ function opts.parse(arg)
    -d,--learningRateDecay  (default 1e-7)        learning rate decay (in # samples)
    -w,--weightDecay        (default 5e-4)        L2 penalty on the weights
    -m,--momentum           (default 0.9)         momentum
-   -b,--batchSize          (default 2)           batch size
+   -b,--batchSize          (default 8)           batch size
    --maxepoch              (default 300)         maximum number of training epochs
    --plot                                        plot training/testing error
-   --lrDecayEvery          (default 100)         Decay learning rate every X epoch by 1e-1
+   --lrDecayEvery          (default 100)          Decay learning rate every X epoch by 1e-1
 
    Device Related:
    -t,--threads            (default 8)           number of threads
@@ -49,7 +49,6 @@ function opts.parse(arg)
    Saving/Displaying Information:
    --noConfusion           (default skip)
                            skip: skip confusion, all: test+train, tes : test only
-   --startfrom             (default .)           type dir/model-x.net
    --printNorm                                   For visualize norm factor while training
  ]]
 
