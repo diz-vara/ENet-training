@@ -12,6 +12,21 @@ require 'nn'
 -- Local repo files
 local opts = require 'opts'
 
+--[[
+print(arg)
+arg = {
+  '--dataset', 'cv', 
+  '--datapath', '/media/D/DIZ/ENet', 
+  '--model', 'models/encoder.lua',
+  '--save', './save/trained/model/',
+  '--imHeight', '360', 
+  '--imWidth', '480', 
+  '-cachepath', './media',
+  '--nGPU', '1',
+  '-r', '1e-6'
+  }
+--]]
+
 -- Get the input arguments parsed and stored in opt
 opt = opts.parse(arg)
 
@@ -34,8 +49,10 @@ elseif opt.dataset == 'cs' then
    data = require 'data/loadCityscape'
 elseif opt.dataset == 'su' then
    data = require 'data/loadSUN'
+elseif opt.dataset == 'my' then
+   data = require 'data/loadMyData'
 else
-   error ("Dataset loader not found. (Available options are: cv/cs/su")
+   error ("Dataset loader not found. (Available options are: cv/cs/su/my")
 end
 
 print 'saving opt as txt and t7'
@@ -46,6 +63,7 @@ for i,v in pairs(opt) do
 end
 file:close()
 torch.save(path.join(opt.save,'opt.t7'),opt)
+
 
 ----------------------------------------------------------------------
 print '==> training!'
@@ -90,4 +108,24 @@ elseif opt.dataset == 'su' then
    end
 else
     error('opt.dataset miss match')
+bestName=path.join(opt.save,'model-best.net');
+print ('::::bestName = ' .. bestName)
+if (paths.filep(bestName)) then
+   md = torch.load(bestName)
+   t.model = md --.modules[1] = md
+   print ('model ' .. bestName .. ' loaded')
+end
+
+-- print(t.model)
+
+local train = require 'train'
+print '-- returned from train'
+local test  = require 'test'
+print ('learnningRate = '.. opt.learningRate)
+while epoch < opt.maxepoch do
+   local trainConf, model, loss = train(data.trainData, opt.dataClasses, epoch)
+   test(data.testData, opt.dataClasses, epoch, trainConf, model, loss )
+   trainConf = nil
+   collectgarbage()
+   epoch = epoch + 1
 end

@@ -156,6 +156,42 @@ local function prepCamVidColors(classes)
    end
 end
 
+local function prepCScategoryColors(classes)
+   local colors = {}
+
+   -- Assign default colors to all the classes
+   for i = 1, #classes do
+      table.insert(colors, defaultColor)
+   end
+
+   -- Colors => Classes
+   -- Assign specific color to respective classes
+   for i = 1, #classes do
+      if classes[i] == 'flat' then
+         colors[i] = colorPalette[blu]
+      elseif classes[i] == 'construction' then
+         colors[i] = colorPalette[yel]
+      elseif classes[i] == 'object' then
+         colors[i] = colorPalette[cya]
+      elseif classes[i] == 'nature' then
+         colors[i] = colorPalette[gre]
+      elseif classes[i] == 'sky' then
+         colors[i] = colorPalette[whi]
+      elseif classes[i] == 'human' then
+         colors[i] = colorPalette[pur]
+      elseif classes[i] == 'vehicle' then
+         colors[i] = colorPalette[red]
+      elseif classes[i] == 'ego' then
+         colors[i] = colorPalette[bro]
+      elseif classes[i] == 'Unlabeled' then
+         colors[i] = colorPalette[gra]
+      end
+   end
+   colorMap.getColors = function()
+      return colors
+   end
+end
+
 local function prepIndoorColors(classes)
    local colors = {}
 
@@ -210,6 +246,8 @@ function colorMap:init(opt, classes)
       prepDrivingColors(classes)
    elseif opt.dataset == 'cv'then
       prepCamVidColors(classes)
+   elseif opt.dataset == 'css'then
+      prepCScategoryColors(classes)
    else
       prepDrivingColors(classes)
    end

@@ -51,8 +51,12 @@ print '==> allocating minibatch memory'
 local x = torch.Tensor(opt.batchSize, opt.channels, opt.imHeight, opt.imWidth)
 local yt = torch.Tensor(opt.batchSize, opt.labelHeight, opt.labelWidth)
 
+print (opt)
+print '==> move data to cuda'
 x = x:cuda()
 yt = yt:cuda()
+
+print '==> defining train function'
 
 local function train(trainData, classes, epoch)
    if epoch % opt.lrDecayEvery == 0 then optimState.learningRate = optimState.learningRate * opt.learningRateDecay end
@@ -81,12 +85,15 @@ local function train(trainData, classes, epoch)
       end
 
       -- create mini batch
+      local names = {}
       local idx = 1
       for i = t,t+opt.batchSize-1 do
          x[idx] = trainData.data[shuffle[i]]
          yt[idx] = trainData.labels[shuffle[i]]
+         --print(trainData.names[shuffle[i]])
          idx = idx + 1
       end
+
 
       -- create closure to evaluate f(X) and df/dX
       local eval_E = function(w)
@@ -96,8 +103,12 @@ local function train(trainData, classes, epoch)
          -- evaluate function for complete mini batch
          local y = model:forward(x)
          -- estimate df/dW
+         --print(x:size(), y:size(), yt:size())
+         --torch.save('y.t7a',y,'ascii')
+         
          err = loss:forward(y,yt)            -- updateOutput
          local dE_dy = loss:backward(y,yt)   -- updateGradInput
+         --print(err)
          model:backward(x,dE_dy)
          -- Don't add this to err, so models with different WD
          -- settings can be easily compared. optim functions
@@ -124,6 +135,8 @@ local function train(trainData, classes, epoch)
           predictions = predictions:view(-1)
           local k = yt:view(-1)
           if opt.dataconClasses then k = k - 1 end
+          --print(yt)
+          --print(predictions:min(), predictions:max(), k:min(), k:max())
           confusion:batchAdd(predictions, k)
           model:training()
       end
@@ -147,4 +160,5 @@ local function train(trainData, classes, epoch)
 end
 
 -- Export:
+print '==> returning train function'
 return train

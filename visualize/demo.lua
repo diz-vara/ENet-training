@@ -14,12 +14,17 @@ require 'qtwidget'
 require 'cunn'
 require 'cudnn'
 
+
+print (arg)
+
 -- Local repo files
 local opts = require 'opts'
-local colorMap = assert(require('colorMap'))
-
 -- Get the input arguments parsed and stored in opt
 local opt = opts.parse(arg)
+torch.save('otps.t7a',opt, 'ascii')
+local colorMap = assert(require('colorMap'))
+
+print (opt)
 
 torch.setdefaulttensortype('torch.FloatTensor')
 if opt.dev:lower() == 'cuda' then
@@ -30,7 +35,15 @@ end
 ----------------------------------------
 -- Network
 local network = {}
-network.path = opt.dmodel .. opt.model .. '/model-' .. opt.net .. '.net'
+network.path = opt.modelpath
+if network.path == nil then
+   network.path=opt.dmodel .. opt.model .. '/model-' .. opt.net .. '.net'
+   network.txtpath=opt.dmodel .. opt.model .. '/model-' .. opt.net .. '.n7a'
+else
+  local rn = paths.dirname(network.path)
+  opt.model = paths.basename(rn)
+  opt.dmodel = paths.dirname(rn) .. '/'
+end
 assert(paths.filep(network.path), 'Model not present at ' .. network.path)
 print("Loading model from: " .. network.path)
 
@@ -47,6 +60,7 @@ end
 if opt.dev:lower() == 'cpu' then
    cudnn.convert(network.model, nn)
    network.model:float()
+   --torch.save(network.txtpath, network.model, 'ascii')
 else
    network.model:cuda()
 end
@@ -59,7 +73,8 @@ network.model:clearState()
 local stat_file = opt.dmodel .. opt.model .. '/' .. 'stat.t7'
 if paths.filep(stat_file) then
    network.stat = torch.load(stat_file)
-elseif paths.filep(stat_file .. 'ascii') then
+elseif paths.filep(stat_file .. 'ascii')
+then
    network.stat = torch.load(stat_file .. '.ascii', 'ascii')
 else
    print('No stat file found in directory: ' .. opt.dmodel .. opt.model)
@@ -144,12 +159,24 @@ source.fps = opt.fps
 -- source height and width gets updated by __init based on the input video
 frame:init(opt, source)
 
+ local newW = source.w
+ local newH = source.h
+-- 20160809 - optionally rescale to HD
+if (opt.width > 0) then
+  newW = opt.width
+  newH = source.h * opt.width / source.w
+end
+
+
 -- Create a window for displaying output frames
 win = qtwidget.newwindow
-   ( source.w * opt.ratio * opt.zoom + 75
-   , source.h * opt.ratio * opt.zoom
-   , 'e-Lab Scene Parser'
-   )
+   ( newW * opt.zoom + 75
+   , newH * opt.zoom
+   , 'e-Lab Scene ParserParser'
+ )
+ 
+ --lbl = torch.Tensor(3,#classes * 100,200)
+
 
 local qtimer = qt.QTimer()
 
@@ -159,29 +186,51 @@ win:setfontsize(12)
 -- Show legends in the output window:
 local dy = 20
 if opt.limitClass then
-   dy = (opt.zoom * opt.ratio * source.h)/(#classSmall + 1)
+   dy = (opt.zoom * newH)/(#classSmall + 1)
    for i = 1,#classSmall do
       local y = (i-1)*dy
-      win:rectangle(source.w * opt.ratio * opt.zoom, y, 75, dy)
+      win:rectangle(newW * opt.zoom, y, 75, dy)
       win:setcolor(colorsSmall[i][1],colorsSmall[i][2],colorsSmall[i][3])
       win:fill()
       win:setcolor('black')
-      win:moveto(source.w * opt.ratio * opt.zoom + 5, y+dy/2)
+      win:moveto(newW * opt.zoom + 5, y+dy/2)
       win:show(classSmall[i])
+      --[[
+      lbl[{{1}, {(i-1)*100+1, i*100}, {}}] = colorSmall[i][1]
+      lbl[{{2}, {(i-1)*100+1, i*100}, {}}] = colorSmall[i][2]
+      lbl[{{3}, {(i-1)*100+1, i*100}, {}}] = colorSmall[i][3]
+      --]]
    end
 else
-   dy = (opt.zoom * opt.ratio * source.h)/(#classes + 1)
+   dy = (opt.zoom * newH)/(#classes + 1)
    for i = 1,#classes do
       local y = (i-1)*dy
-      win:rectangle(source.w * opt.ratio * opt.zoom, y, 75, dy)
+      win:rectangle(newW * opt.zoom, y, 75, dy)
       win:setcolor(colors[i][1],colors[i][2],colors[i][3])
       win:fill()
       win:setcolor('black')
-      win:moveto(source.w * opt.ratio * opt.zoom + 5, y+dy/2)
+      win:moveto(newW * opt.zoom + 5, y+dy/2)
       win:show(classes[i])
+      --[[     
+      lbl[{{1}, {(i-1)*100+1, i*100}, {}}] = colors[i][1]
+      lbl[{{2}, {(i-1)*100+1, i*100}, {}}] = colors[i][2]
+      lbl[{{3}, {(i-1)*100+1, i*100}, {}}] = colors[i][3]
+      --]]
+
+   
    end
 end
+   
+--[[   
+image.display(lbl)   
+if (opt.out ~= nil and opt.out:len() > 0) then 
+  image.savePNG(opt.out .. "/colors.png",lbl);
+end
+--]]
 
+bPause = false
+bOnce = false
+bPause = false
 
 -- profiling timers
 local timer = torch.Timer()      -- whole loop
@@ -196,20 +245,57 @@ local tc = torch.Timer()
 local colormapTime
 local td = torch.Timer()         -- displaying
 local displayTime
+local imgHD
+local fn
+local outName
+local inpName
+local colored
 
 local main = function()
-   if win:valid() then
+   if win:valid() and (not bPause or bOnce) then
+	if (bOnce) then
+		bOnce = false
+	end
+
       -- Reset timer to mark starting point to calculate fps
       timer:reset()
 
       -- Getting next frame
       tg:reset()
-      local img = frame.forward(img)
+      img, fn, basename = frame.forward(img)
+      if (fn == nil) then
+        print('fn == nil')
+        --  return false;
+      end
+      
+      
+      
+      
+      if opt.saveinp and opt.saveinp:len() > 0 then
+        local inpDir = opt.saveinp .. '/' .. basename
+        if (paths.dirp(inpDir) == false) then
+          paths.mkdir(inpDir)
+        end
+        
+        inpName = inpDir .. '/' .. fn;
+      end
+        
+      if opt.out and opt.out:len() > 0 then
+        local outDir = opt.out .. '/' .. basename
+        if (paths.dirp(outDir) == false) then
+          paths.mkdir(outDir)
+        end
+        
+        outName = outDir .. '/' .. fn;
+      end
+      print (fn)
 
+      win.name = ''
       grabTime = tg:time().real
 
       -- Processing the frame and forwarding it to network
       tp:reset()
+      
        -- normalize the input:
        -- for i=1,img:size(1) do
        --    for c = 1,3 do
@@ -217,18 +303,38 @@ local main = function()
        --       img[i][c]:div( network.stat.std [c])
        --    end
        -- end
-
+      
+      
       if img:dim() == 3 then
-         img = img:view(1, img:size(1), img:size(2), img:size(3))
+         img = img:view(1, img:size(1), newH, newW)
       end
-      local scaledImg = torch.Tensor(1, 3, opt.ratio * img:size(3), opt.ratio * img:size(4))
+      
+      
+      local nChans = img:size(2)
+     
+       
+      if imgHD ==  nil then
+         imgHD = torch.Tensor(1, nChans, newH, newW)
+       end
+    
+      -- 20160809 - optionally rescale to HD
+      if (opt.width > 0) then
+        imgHD[1] = image.scale( img[1], newW, newH, 'bilinear')
+      else
+        imgHD = image
+      end
+
+      
+      
+      
+      local scaledImg = torch.Tensor(1, nChans, opt.ratio * newH, opt.ratio * newW)
 
       if opt.ratio == 1 then
-         scaledImg[1] = img[1]
+         scaledImg[1] = imgHD[1]
       else
-         scaledImg[1] = image.scale(img[1],
-                                    opt.ratio * source.w,
-                                    opt.ratio * source.h,
+        scaledImg[1] = image.scale(imgHD[1],
+                                    opt.ratio * newW,
+                                    opt.ratio * newH,
                                     'bilinear')
       end
 
@@ -257,12 +363,14 @@ local main = function()
          winner = winners:squeeze()
       end
 
+     
       -- Confirming whether rescaling is even necessary or not
+      --local winner0 = winner:clone()
       if opt.ratio * source.h ~= winner:size(1) or
          opt.ratio * source.w ~= winner:size(2) then
          winner = image.scale(winner:float(),
-                              opt.ratio * source.w,
-                              opt.ratio * source.h,
+                              newW, -- * opt.ratio,
+                              newH, -- * opt.ratio,
                               'simple')
       end
       winnerTime = tw:time().real
@@ -273,25 +381,31 @@ local main = function()
       tc:reset()
       -- colorize classes
       colored, colormap = imgraph.colorize(winner, colormap)
+    
+      if outName ~= nil and opt.save then
+        image.savePNG(outName, colored)
+        --torch.save(outName .. '.t7a',winner0, 'ascii')
+      end
 
+    local sum = colored:clone();
       -- add input image:
-      colored:add(scaledImg[1]:float())
+      sum:add(imgHD[1]:float())
 
       colormapTime = tc:time().real
 
       td:reset()
       -- display frame:
       -- gui is turned off for faster display
-      image.display{image=colored, win=win,
+      image.display{image=sum, win=win,
                     zoom=opt.zoom, gui=false,
                     min=0, max=colored:max()
                    }
 
-      win:rectangle(source.w * opt.ratio * opt.zoom, (source.h * opt.ratio * opt.zoom)-dy, 75, dy)
+      win:rectangle(newW * opt.zoom, (newH * opt.zoom)-dy, 75, dy)
       win:setcolor('white')
       win:fill()
       win:setcolor('black')
-      win:moveto(source.w * opt.ratio * opt.zoom + 5, (source.h * opt.ratio * opt.zoom)-dy + 15)
+      win:moveto(newW * opt.zoom + 5, (newH * opt.zoom)-dy + 15)
 
       displayTime = td:time().real
 
@@ -300,7 +414,7 @@ local main = function()
       local fps = string.format('%.2f', (1/totalTime)) .. ' fps'
 
       win:show(fps)
-      -- display profiling on screen
+      -- display profiling on screen  
       win:setfont(qt.QFont{serif=false, italic=false, size=12})
       win:gend()
 
@@ -331,9 +445,19 @@ local prevState = true
 qt.connect(win.listener,
          'sigKeyPress(QString, QByteArray, QByteArray)',
          function(_, keyValue)
-            if keyValue == 'Key_Space' then
+            if keyValue == 'Key_E' then
+              bPause = true;
+              bOnce = true;
+            elseif keyValue == 'Key_S' then
+              if outName ~= nil  then
+                image.savePNG(outName, colored)
+              end
+              if inpName ~= nil  then
+                image.savePNG(inpName, imgHD[1])
+              end
+            elseif keyValue == 'Key_Space' then
                print("Video paused; press enter to continue...")
-               io.read()
+               bPause = not bPause --io.read()
             elseif keyValue == 'Key_Escape' then
                os.exit()
             elseif keyValue == 'Key_Right' then

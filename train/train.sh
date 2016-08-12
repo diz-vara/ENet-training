@@ -1,0 +1,1 @@
+th run.lua --dataset cs --datapath /media/D/DIZ/CityScapes --model models/encoder.lua --save ./save/trained/modelCS_8/ --imHeight 256 -imWidth 512 --labelWidth 64 --labelHeight 32 -cachepath ./media --nGPU 1 --maxepoch 3000 -r 3e-4  --plot -m 0.9 -lrDecayEvery 0 -b 24 --smallNet
