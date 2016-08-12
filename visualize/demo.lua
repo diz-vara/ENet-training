@@ -303,22 +303,31 @@ local main = function()
        --       img[i][c]:div( network.stat.std [c])
        --    end
        -- end
-      local imgHD
+      
+      
+      if img:dim() == 3 then
+         img = img:view(1, img:size(1), newH, newW)
+      end
+      
+      
+      local nChans = img:size(2)
+     
        
+      if imgHD ==  nil then
+         imgHD = torch.Tensor(1, nChans, newH, newW)
+       end
+    
       -- 20160809 - optionally rescale to HD
       if (opt.width > 0) then
-        imgHD = image.scale( img[1], newW, newH, 'bilinear')
+        imgHD[1] = image.scale( img[1], newW, newH, 'bilinear')
       else
-        imgHD = image[1]
+        imgHD = image
       end
 
-      if imgHD:dim() == 3 then
-         imgHD = imgHD:view(1, imgHD:size(1), newH, newW)
-      end
       
       
       
-      local scaledImg = torch.Tensor(1, 3, opt.ratio * newH, opt.ratio * newW)
+      local scaledImg = torch.Tensor(1, nChans, opt.ratio * newH, opt.ratio * newW)
 
       if opt.ratio == 1 then
          scaledImg[1] = imgHD[1]
